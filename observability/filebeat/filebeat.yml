@@ -1,0 +1,12 @@
+filebeat.inputs:
+  - type: filestream
+    enabled: true
+    paths:
+      - /logs/app.log
+    parsers:
+      - ndjson:
+          target: ""
+          overwrite_keys: true
+
+output.elasticsearch:
+  hosts: ["http://elasticsearch:9200"]

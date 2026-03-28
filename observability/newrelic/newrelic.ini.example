@@ -1,0 +1,8 @@
+[newrelic]
+license_key = YOUR_NEW_RELIC_LICENSE_KEY
+app_name = AI Assistant Backend MVP
+monitor_mode = true
+log_level = info
+
+[newrelic:development]
+monitor_mode = true
