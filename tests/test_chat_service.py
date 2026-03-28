@@ -17,6 +17,8 @@ def test_handle_message_persists_request_and_reply(db_session) -> None:
     assert response.session_id
     assert response.reply
     assert response.context_used
+    assert response.retrieval_query
+    assert response.citations
     assert [item.role for item in response.history] == ["user", "assistant"]
 
 

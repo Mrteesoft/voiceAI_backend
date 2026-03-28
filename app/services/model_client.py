@@ -16,6 +16,9 @@ class ModelClient(Protocol):
         channel: str = "text",
         platform: str = "web",
         business_actions: list[str] | None = None,
+        retrieval_query: str | None = None,
+        citations: list[str] | None = None,
+        rag_prompt: str | None = None,
     ) -> str:
         ...
 
@@ -27,6 +30,9 @@ class ModelClient(Protocol):
         channel: str = "text",
         platform: str = "web",
         business_actions: list[str] | None = None,
+        retrieval_query: str | None = None,
+        citations: list[str] | None = None,
+        rag_prompt: str | None = None,
     ) -> AsyncIterator[str]:
         ...
 
@@ -44,6 +50,9 @@ class MockModelClient:
         channel: str = "text",
         platform: str = "web",
         business_actions: list[str] | None = None,
+        retrieval_query: str | None = None,
+        citations: list[str] | None = None,
+        rag_prompt: str | None = None,
     ) -> str:
         return self._compose_reply(
             user_message=user_message,
@@ -52,6 +61,9 @@ class MockModelClient:
             channel=channel,
             platform=platform,
             business_actions=business_actions,
+            retrieval_query=retrieval_query,
+            citations=citations,
+            rag_prompt=rag_prompt,
         )
 
     async def stream_reply(
@@ -62,6 +74,9 @@ class MockModelClient:
         channel: str = "text",
         platform: str = "web",
         business_actions: list[str] | None = None,
+        retrieval_query: str | None = None,
+        citations: list[str] | None = None,
+        rag_prompt: str | None = None,
     ) -> AsyncIterator[str]:
         reply = self._compose_reply(
             user_message=user_message,
@@ -70,6 +85,9 @@ class MockModelClient:
             channel=channel,
             platform=platform,
             business_actions=business_actions,
+            retrieval_query=retrieval_query,
+            citations=citations,
+            rag_prompt=rag_prompt,
         )
         for token in reply.split():
             yield f"{token} "
@@ -83,10 +101,15 @@ class MockModelClient:
         channel: str = "text",
         platform: str = "web",
         business_actions: list[str] | None = None,
+        retrieval_query: str | None = None,
+        citations: list[str] | None = None,
+        rag_prompt: str | None = None,
     ) -> str:
         context_block = " | ".join(context) if context else "No extra context found."
         turn_count = len(history)
         action_block = ", ".join(business_actions or ["track_conversation_session"])
+        citation_block = ", ".join(citations or ["no-citations"])
+        rag_block = rag_prompt or "No RAG prompt supplied."
         transport = (
             "a voice pipeline that receives transcripts and emits audio-ready responses"
             if channel == "voice"
@@ -97,7 +120,10 @@ class MockModelClient:
             f"through an orchestrator, attach retrieved context, and store the conversation. "
             f"This request is using {transport} on the {platform} platform. "
             f"Business actions in scope: {action_block}. "
+            f"Retrieval query: {retrieval_query or user_message}. "
+            f"Sources: {citation_block}. "
             f"Relevant context: {context_block}. "
+            f"Grounding instructions: {rag_block}. "
             f"Conversation turns stored so far: {turn_count}. "
             f"Latest user intent: {user_message}"
         )

@@ -22,6 +22,8 @@ def test_process_interaction_records_pipeline_events_and_voice_output(db_session
     assert result["reply"]
     assert result["voice_response"] is not None
     assert result["voice_response"]["transport"] == "sip-bridge"
+    assert result["retrieval_query"]
+    assert result["citations"]
     assert "prefer_concise_spoken_reply" in result["business_actions"]
     assert "invoke_order_workflow" in result["business_actions"]
     assert "invoke_scheduling_workflow" in result["business_actions"]
@@ -30,10 +32,13 @@ def test_process_interaction_records_pipeline_events_and_voice_output(db_session
     assert persisted is not None
     assert persisted["metadata"]["locale"] == "en-NG"
     assert persisted["transcript"] == "Schedule a payment reminder for tomorrow morning."
+    assert persisted["retrieval_query"]
+    assert persisted["citations"]
     assert [event["stage"] for event in persisted["events"]] == [
         "input_received",
         "input_normalized",
         "context_loaded",
+        "rag_prepared",
         "business_logic_applied",
         "model_completed",
         "voice_response_ready",

@@ -54,6 +54,8 @@ class InteractionResponse(BaseModel):
     transcript: str | None = None
     reply: str
     context_used: list[str] = Field(default_factory=list)
+    retrieval_query: str
+    citations: list[str] = Field(default_factory=list)
     business_actions: list[str] = Field(default_factory=list)
     metadata: dict[str, object] = Field(default_factory=dict)
     voice_response: VoiceResponsePayload | None = None

@@ -15,7 +15,7 @@ from app.db.models import (
 )
 from app.services.business_logic_service import BusinessLogicService
 from app.services.model_client import get_model_client
-from app.services.retrieval import RetrievalService
+from app.services.rag_service import RAGService
 from app.services.voice_service import VoiceService
 
 
@@ -23,7 +23,7 @@ class InteractionPipelineService:
     def __init__(self) -> None:
         settings = get_settings()
         self.model_history_window_size = settings.model_history_window_size
-        self.retrieval_service = RetrievalService()
+        self.rag_service = RAGService()
         self.model_client = get_model_client()
         self.voice_service = VoiceService()
         self.business_logic_service = BusinessLogicService()
@@ -60,6 +60,9 @@ class InteractionPipelineService:
             channel=channel,
             platform=platform,
             business_actions=prepared["business_actions"],
+            retrieval_query=prepared["retrieval_query"],
+            citations=prepared["citations"],
+            rag_prompt=prepared["rag_prompt"],
         )
         self._record_event(
             db=db,
@@ -91,6 +94,8 @@ class InteractionPipelineService:
             normalized_text=prepared["normalized_text"],
             reply=reply,
             context=prepared["context"],
+            retrieval_query=prepared["retrieval_query"],
+            citations=prepared["citations"],
             channel=channel,
             platform=platform,
             metadata=prepared["metadata"],
@@ -142,6 +147,12 @@ class InteractionPipelineService:
             "items": prepared["context"],
         }
         yield {
+            "event": "rag_prepared",
+            "run_id": prepared["run"].id,
+            "retrieval_query": prepared["retrieval_query"],
+            "citations": prepared["citations"],
+        }
+        yield {
             "event": "business_logic_applied",
             "run_id": prepared["run"].id,
             "actions": prepared["business_actions"],
@@ -156,6 +167,9 @@ class InteractionPipelineService:
             channel=channel,
             platform=platform,
             business_actions=prepared["business_actions"],
+            retrieval_query=prepared["retrieval_query"],
+            citations=prepared["citations"],
+            rag_prompt=prepared["rag_prompt"],
         ):
             reply_parts.append(token)
             yield {
@@ -200,6 +214,8 @@ class InteractionPipelineService:
             normalized_text=prepared["normalized_text"],
             reply=reply,
             context=prepared["context"],
+            retrieval_query=prepared["retrieval_query"],
+            citations=prepared["citations"],
             channel=channel,
             platform=platform,
             metadata=prepared["metadata"],
@@ -225,6 +241,7 @@ class InteractionPipelineService:
 
         events = self._list_run_events(db=db, run_id=run.id)
         context_event = next((event for event in events if event.stage == "context_loaded"), None)
+        rag_event = next((event for event in events if event.stage == "rag_prepared"), None)
         voice_event = next((event for event in events if event.stage == "voice_response_ready"), None)
         return {
             "run_id": run.id,
@@ -238,6 +255,8 @@ class InteractionPipelineService:
             "transcript": run.transcript,
             "reply": run.reply or "",
             "context_used": list(context_event.payload.get("items", [])) if context_event else [],
+            "retrieval_query": str(rag_event.payload.get("retrieval_query", run.input_text)) if rag_event else run.input_text,
+            "citations": list(rag_event.payload.get("citations", [])) if rag_event else [],
             "business_actions": list(run.business_actions or []),
             "metadata": self._sanitize_metadata(run.request_metadata or {}),
             "voice_response": voice_event.payload if voice_event else None,
@@ -343,13 +362,38 @@ class InteractionPipelineService:
             for record in history_records
         ]
 
-        context = self.retrieval_service.get_context(db=db, query=normalized_text)
+        rag_result = self.rag_service.prepare_generation_context(
+            db=db,
+            user_message=normalized_text,
+            history=history,
+        )
+        context = rag_result.context_texts
         self._record_event(
             db=db,
             run=run,
             stage="context_loaded",
             source="retrieval",
             payload={"items": context},
+        )
+        self._record_event(
+            db=db,
+            run=run,
+            stage="rag_prepared",
+            source="rag",
+            payload={
+                "retrieval_query": rag_result.retrieval_query,
+                "citations": rag_result.citations,
+                "sources": [
+                    {
+                        "chunk_id": item.chunk_id,
+                        "citation": item.citation,
+                        "document_title": item.document_title,
+                        "score": item.score,
+                        "retrieval_strategy": item.retrieval_strategy,
+                    }
+                    for item in rag_result.context_items
+                ],
+            },
         )
 
         business_outcome = self.business_logic_service.evaluate(
@@ -377,6 +421,9 @@ class InteractionPipelineService:
             "transcript": run.transcript,
             "history": history,
             "context": context,
+            "rag_prompt": rag_result.grounded_prompt,
+            "retrieval_query": rag_result.retrieval_query,
+            "citations": rag_result.citations,
             "metadata": self._sanitize_metadata(normalized_metadata),
             "business_actions": business_actions,
             "integration_targets": business_outcome["integration_targets"],
@@ -392,6 +439,8 @@ class InteractionPipelineService:
         normalized_text: str,
         reply: str,
         context: list[str],
+        retrieval_query: str,
+        citations: list[str],
         channel: str,
         platform: str,
         metadata: dict[str, object],
@@ -430,6 +479,8 @@ class InteractionPipelineService:
             "transcript": run.transcript,
             "reply": reply,
             "context_used": context,
+            "retrieval_query": retrieval_query,
+            "citations": citations,
             "business_actions": business_actions,
             "metadata": metadata,
             "voice_response": voice_response,

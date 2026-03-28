@@ -59,9 +59,11 @@ class RetrievalService:
 
         return [
             {
+                "chunk_id": chunk.id,
                 "content": chunk.content,
                 "score": max(0.0, 1.0 - float(distance_value)),
                 "document_title": chunk.document.title if chunk.document else None,
+                "retrieval_strategy": "vector",
             }
             for chunk, distance_value in rows
         ]
@@ -98,9 +100,11 @@ class RetrievalService:
         ranked = sorted(scored_items, key=lambda item: item[0], reverse=True)
         relevant = [
             {
+                "chunk_id": chunk.id,
                 "content": chunk.content,
                 "score": score,
                 "document_title": chunk.document.title if chunk.document else None,
+                "retrieval_strategy": "lexical",
             }
             for score, chunk in ranked
             if score > 0
@@ -111,9 +115,11 @@ class RetrievalService:
 
         return [
             {
+                "chunk_id": chunk.id,
                 "content": chunk.content,
                 "score": 0.0,
                 "document_title": chunk.document.title if chunk.document else None,
+                "retrieval_strategy": "lexical",
             }
             for chunk in chunks[:limit]
         ]

@@ -53,6 +53,8 @@ class ChatService:
             user_id=result["user_id"],
             reply=result["reply"],
             context_used=result["context_used"],
+            retrieval_query=result["retrieval_query"],
+            citations=result["citations"],
             platform=result["platform"],
             pipeline_run_id=result["run_id"],
             business_actions=result["business_actions"],

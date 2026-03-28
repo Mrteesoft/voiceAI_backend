@@ -68,6 +68,8 @@ class SessionResponse(BaseModel):
 class ChatResponse(SessionResponse):
     reply: str
     context_used: list[str]
+    retrieval_query: str
+    citations: list[str] = Field(default_factory=list)
     platform: PlatformType
     pipeline_run_id: str
     business_actions: list[str] = Field(default_factory=list)

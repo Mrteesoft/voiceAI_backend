@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     default_history_limit: int = 50
     default_document_limit: int = 50
     default_search_limit: int = 5
+    rag_enabled: bool = True
+    rag_query_history_window: int = 3
+    rag_retrieval_limit: int = 4
+    rag_context_char_limit: int = 1600
     embedding_backend: str = "hash"
     embedding_dimensions: int = 384
     observability_service_name: str = "ai-assistant-backend"

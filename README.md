@@ -1,4 +1,4 @@
-# FastAPI AI Assistant Backend MVP
+﻿# FastAPI AI Assistant Backend MVP
 
 This is a small Python + FastAPI backend that shows how to build the system around an existing AI model.
 
@@ -12,6 +12,7 @@ It demonstrates:
 - an asynchronous message queue for text and voice jobs
 - persisted knowledge documents and chunks in PostgreSQL
 - pgvector-backed embedding storage and semantic retrieval
+- an explicit RAG pipeline that shapes retrieval queries, assembles grounded context, and exposes citations
 - interaction pipeline runs and stage events for API, voice, retrieval, model, and business layers
 - mock speech-to-text and text-to-speech adapters for audio-shaped voice requests
 - request timing and logging for performance visibility
@@ -30,9 +31,9 @@ It demonstrates:
 2. The backend creates or loads a chat session
 3. The user message is stored in PostgreSQL
 4. The interaction pipeline normalizes input, attaches platform metadata, and records stage events
-5. A retrieval service searches `knowledge_chunks.embedding` with `pgvector` cosine distance and falls back to local lexical search if vector search is unavailable
+5. A RAG service expands the retrieval query with recent user intent, ranks knowledge chunks, and builds a grounded prompt with citations
 6. A business-logic adapter decides which downstream integrations or workflows should be involved
-7. A model adapter generates the assistant reply
+7. A model adapter generates the assistant reply using the grounded RAG prompt
 8. For voice requests, a voice adapter prepares the reply for audio transport
 9. The assistant reply and pipeline run are stored and returned to the client
 
@@ -213,6 +214,13 @@ Send JSON like:
 - Interaction runs persist stage events so API, voice, retrieval, model, and business steps can be inspected after the request completes.
 - Inline audio input is accepted as base64 for the demo pipeline; the current STT/TTS path is mocked so you can understand the backend shape before wiring a real provider.
 - Run tests with `pytest`.
+
+## RAG Notes
+
+- The model-facing RAG path lives in `app/services/rag_service.py`.
+- It builds a retrieval query from the latest user message plus recent user turns, retrieves ranked chunks, deduplicates them, and assembles a grounded prompt block for the model.
+- Chat and interaction responses now expose `retrieval_query` and `citations`, while pipeline events include a `rag_prepared` stage with the selected sources.
+- The current embedder and model are still local demo implementations, but the backend flow now matches a real retrieval-augmented generation pipeline.
 
 ## pgvector Notes
 

@@ -43,6 +43,8 @@ def test_process_interaction_accepts_audio_input_and_returns_audio_output(db_ses
 
     assert result["has_audio_input"] is True
     assert result["transcript"] == "Schedule a payment reminder for tomorrow morning."
+    assert result["retrieval_query"]
+    assert result["citations"]
     assert result["voice_response"] is not None
     assert result["voice_response"]["audio_base64"]
     assert result["voice_response"]["audio_format"] == "wav"
@@ -51,4 +53,6 @@ def test_process_interaction_accepts_audio_input_and_returns_audio_output(db_ses
     assert persisted is not None
     assert persisted["has_audio_input"] is True
     assert persisted["metadata"]["locale"] == "en-NG"
+    assert persisted["retrieval_query"]
+    assert persisted["citations"]
     assert "audio_input" not in persisted["metadata"]
